@@ -173,6 +173,8 @@ object AppColors {
     val brown800 = Color(0xff5d4037)
     val brown900 = Color(0xff4e342e)
 
+    val white = Color(0xffffffff)
+
     val gray100 = Color(0xfffafafa)
     val gray200 = Color(0xfff5f5f5)
     val gray300 = Color(0xffeeeeee)
