@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonDefaults.buttonColors
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
@@ -24,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Canvas
@@ -33,6 +36,7 @@ import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
@@ -60,7 +64,9 @@ fun Questions(viewModel: QuestionViewModel) {
             null
         }
         if (questions!=null){
-            QuestionDisplay(question=questions[questionIndex.value],questionIndex= questionIndex){
+            QuestionDisplay(question=questions[questionIndex.value],
+                questionIndex= questionIndex,
+                viewModel=viewModel ){
                 questionIndex.value=it+1
             }
         }
@@ -71,8 +77,8 @@ fun Questions(viewModel: QuestionViewModel) {
 @Composable
 fun QuestionDisplay(
     question: QuestionItem,
-   questionIndex: MutableState<Int>,
-//    viewModel: QuestionViewModel,
+    questionIndex: MutableState<Int>,
+    viewModel: QuestionViewModel,
     onNextQuestion:(Int)->Unit={},
                     ) {
 
@@ -104,14 +110,18 @@ fun QuestionDisplay(
         Column(modifier= Modifier.padding(12.dp),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.Start) {
-            QuestionTracker(questionIndex.value,)
+            if (questionIndex.value >= 3) {
+                Progress(score = questionIndex.value)
+            }
+            QuestionTracker(questionIndex.value,viewModel.getTotalQuestionCount())
             DottedLine(pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f,10f),0f))
             QuestionTitle(question.question)
             Choices(choicesState, answerState, updateAnswer, correctAnswerState)
             Button(onClick = {
                 onNextQuestion(questionIndex.value)
             },
-                modifier =Modifier.padding(3.dp)
+                modifier = Modifier
+                    .padding(3.dp)
                     .align(alignment = Alignment.CenterHorizontally),
                 shape = RoundedCornerShape(34.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -134,57 +144,62 @@ private fun Choices(
     updateAnswer: (Int) -> Unit,
     correctAnswerState: MutableState<Boolean?>
 ) {
-    choicesState.forEachIndexed { index, answerText ->
-        Row(
-            modifier = Modifier
-                .padding(3.dp)
-                .fillMaxWidth()
-                .height(45.dp)
-                .border(
-                    width = 4.dp,
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            AppColors.indigo800,
-                            AppColors.indigo800
-                        )
-                    ),
-                    shape = RoundedCornerShape(15.dp)
-                )
-                .background(Color.Transparent),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            RadioButton(
-                selected = (answerState.value == index),
-                onClick = {
-                    updateAnswer(index)
-                },
-                modifier = Modifier.padding(start = 16.dp),
-                colors = RadioButtonDefaults.colors(
-                    selectedColor = if (correctAnswerState.value == true && index == answerState.value) {
-                        Color.Green.copy(alpha = 0.2f)
-                    } else {
-                        Color.Red.copy(alpha = 0.2f)
-                    }
-                )
-            )
-            val annotatedString = buildAnnotatedString {
-                withStyle(style = ParagraphStyle(textIndent = TextIndent.None)) {
-                    withStyle(
-                        style = SpanStyle(
-                            color = if (correctAnswerState.value == true && index == answerState.value) {
-                                Color.Green.copy(0.9f)
-                            } else {
-                                Color.White
-                            },
-                            fontSize = 14.sp
-                        )
-                    ) {
 
-                        append(answerText)
+    Column(modifier = Modifier.fillMaxHeight(0.55f)) {
+        choicesState.forEachIndexed { index, answerText ->
+            Row(
+                modifier = Modifier
+                    .padding(3.dp)
+                    .fillMaxWidth()
+                    .height(45.dp)
+                    .border(
+                        width = 4.dp,
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                AppColors.indigo800,
+                                AppColors.indigo800
+                            )
+                        ),
+                        shape = RoundedCornerShape(15.dp)
+                    )
+                    .background(Color.Transparent),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = (answerState.value == index),
+                    onClick = {
+                        updateAnswer(index)
+                    },
+                    modifier = Modifier.padding(start = 16.dp),
+                    colors = RadioButtonDefaults.colors(
+                        selectedColor = if (correctAnswerState.value == true && index == answerState.value) {
+                            Color.Green.copy(alpha = 0.2f)
+                        } else {
+                            Color.Red.copy(alpha = 0.2f)
+                        }
+                    )
+                )
+                val annotatedString = buildAnnotatedString {
+                    withStyle(style = ParagraphStyle(textIndent = TextIndent.None)) {
+                        withStyle(
+                            style = SpanStyle(
+                                color = if (correctAnswerState.value == true && index == answerState.value) {
+                                    Color.Green.copy(0.9f)
+                                } else if(correctAnswerState.value == false && index == answerState.value) {
+                                    Color.Red
+                                }else{
+                                    Color.White
+                                },
+                                fontSize = 14.sp
+                            )
+                        ) {
+
+                            append(answerText)
+                        }
                     }
                 }
+                Text(text = annotatedString, modifier = Modifier.padding(8.dp))
             }
-            Text(text = annotatedString, modifier = Modifier.padding(8.dp))
         }
     }
 }
@@ -227,4 +242,64 @@ fun QuestionTracker(counter: Int =10,
         }
     },modifier= Modifier.padding(12.dp))
 }
+
+@Preview
+@Composable
+fun Progress(score: Int = 50) {
+    val progress = remember(score) {
+        mutableStateOf(score * 0.05f)
+    }
+
+    Row(modifier= Modifier
+        .padding(3.dp)
+        .fillMaxWidth()
+        .height(45.dp)
+        .border(
+            width = 4.dp,
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    AppColors.gray900,
+                    AppColors.gray900
+                )
+            ),
+            shape = RoundedCornerShape(25.dp)
+        )
+        .clip(
+            RoundedCornerShape(
+                topStartPercent = 50,
+                topEndPercent = 50,
+                bottomEndPercent = 50,
+                bottomStartPercent = 50
+            )
+        )
+        .background(Color.Transparent),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Start) {
+        Button(onClick = { },contentPadding = PaddingValues(1.dp),
+            modifier = Modifier
+                .fillMaxWidth(progress.value)
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            AppColors.pink800,
+                            AppColors.purple500
+                        )
+                    ),
+                ), enabled = false, elevation = null,
+            colors = buttonColors(
+                containerColor = Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+            )) {
+                Text(text =(score*10).toString(),
+                modifier=Modifier.clip(shape= RoundedCornerShape(23.dp))
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.87f)
+                    .padding(6.dp),
+                    color = AppColors.white,
+                    textAlign = TextAlign.Center)
+        }
+
+    }
+}
+
 
